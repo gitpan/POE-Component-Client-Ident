@@ -16,19 +16,19 @@ use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '0.2';
+$VERSION = '0.3';
 
 sub spawn {
     my ($package) = shift;
     my $sender = $poe_kernel->get_active_session;
 
-    my ($peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd) = _parse_arguments(@_);
+    my ($peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout) = _parse_arguments(@_);
  
     unless ( $peeraddr and $peerport and $sockaddr and $sockport ) {
         croak "Not enough arguments supplied to $package->spawn";
     }
 
-    my $self = $package->new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd);
+    my $self = $package->new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout);
 
     POE::Session->create(
         object_states => [
@@ -38,8 +38,8 @@ sub spawn {
 }
 
 sub new {
-    my ( $package, $sender, $peeraddr, $peerport, $sockaddr, $sockport, $identport, $buggyidentd ) = @_;
-    return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd }, $package;
+    my ( $package, $sender, $peeraddr, $peerport, $sockaddr, $sockport, $identport, $buggyidentd, $timeout ) = @_;
+    return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd, timeout => $timeout }, $package;
 }
 
 sub get_session {
@@ -94,7 +94,7 @@ sub _sock_up {
   }
   
   $self->{socket}->put($self->{query_string});
-  $kernel->delay( '_time_out' => 30 );
+  $kernel->delay( '_time_out' => $self->{timeout} );
 }
 
 sub _sock_down {
@@ -176,6 +176,10 @@ sub _parse_arguments {
 	if ( defined ( $hash{'BuggyIdentd'} ) and $hash{'BuggyIdentd'} == 1 ) {
 	  $returns[5] = $hash{'BuggyIdentd'};
 	}
+	if ( defined ( $hash{'TimeOut'} ) and ( $hash{'TimeOut'} > 5 or $hash{'TimeOut'} < 30 ) ) {
+	  $returns[6] = $hash{'TimeOut'};
+        }
+	$returns[6] = 30 unless ( defined ( $returns[6] ) );
 	if ( defined ( $hash{'Socket'} ) ) {
 	  $returns[0] = inet_ntoa( (unpack_sockaddr_in( getpeername $hash{'Socket'} ))[1] );
     	  $returns[1] = (unpack_sockaddr_in( getpeername $hash{'Socket'} ))[0];
@@ -212,6 +216,7 @@ POE::Component::Client::Ident::Agent - A component to provide a one-shot non-blo
 									   # Default shown
 						BuggyIdentd => 0	   # Dealing with an Identd that isn't
 									   # RFC compatable. Default is 0.
+						TimeOut => 30		   # Adjust the timeout period.
 						);
 
   sub _child {
@@ -251,7 +256,9 @@ where the TCP has originated from; SockAddr, the address of our end of the conne
 the connection; OR: Socket, the socket handle of the connection, the component will work out all the details for you. If Socket is defined, it will override the settings of the other arguments, except for IdentPort, which is the port on the remote 
 host where we send our ident queries. This is optional, defaults to 113.
 
-You may also specify BuggyIdentd to 1, to support Identd that don't terminate lines as per the RFC.
+You may also specify BuggyIdentd to 1, to support Identd that doesn't terminate lines as per the RFC.
+
+You may also specify TimeOut between 5 and 30, to have a shorter timeout in seconds on waiting for a response from the Identd. Default is 30 seconds.
 
 There is no return value.
 

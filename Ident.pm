@@ -13,7 +13,7 @@ use POE::Component::Client::Ident::Agent;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.2';
+$VERSION = '0.3';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
@@ -144,7 +144,9 @@ POE::Component::Client::Ident - A component that provides non-blocking ident loo
    $kernel->post ( 'Ident-Client' => query => PeerAddr => '10.0.0.1', 
 				              PeerPort => 2345,
 					      SockAddr => '192.168.1.254',
-					      SockPort => 6669 );
+					      SockPort => 6669,
+					      BuggyIdentd => 1,
+					      TimeOut => 30 );
 
 =head1 DESCRIPTION
 
@@ -175,7 +177,7 @@ The component accepts the following events:
 Takes either the arguments: PeerAddr, the remote IP address where a TCP connection has originated; PeerPort, the port
 where the TCP has originated from; SockAddr, the address of our end of the connection; SockPort, the port of our end of
 the connection; OR: Socket, the socket handle of the connection, the component will work out all the details for you. If Soc
-ket is defined, it will override the settings of the other arguments.
+ket is defined, it will override the settings of the other arguments. See the documentation for Ident-Agent for extra parameters you may pass.
 
 =item shutdown
 
