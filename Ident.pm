@@ -13,7 +13,7 @@ use POE::Component::Client::Ident::Agent;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.1';
+$VERSION = '0.2';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;

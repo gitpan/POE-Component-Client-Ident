@@ -16,19 +16,19 @@ use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '0.1';
+$VERSION = '0.2';
 
 sub spawn {
     my ($package) = shift;
     my $sender = $poe_kernel->get_active_session;
 
-    my ($peeraddr,$peerport,$sockaddr,$sockport,$identport) = _parse_arguments(@_);
+    my ($peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd) = _parse_arguments(@_);
  
     unless ( $peeraddr and $peerport and $sockaddr and $sockport ) {
         croak "Not enough arguments supplied to $package->spawn";
     }
 
-    my $self = $package->new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport);
+    my $self = $package->new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd);
 
     POE::Session->create(
         object_states => [
@@ -38,8 +38,8 @@ sub spawn {
 }
 
 sub new {
-    my ( $package, $sender, $peeraddr, $peerport, $sockaddr, $sockport, $identport ) = @_;
-    return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport }, $package;
+    my ( $package, $sender, $peeraddr, $peerport, $sockaddr, $sockport, $identport, $buggyidentd ) = @_;
+    return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd }, $package;
 }
 
 sub get_session {
@@ -70,14 +70,21 @@ sub _start {
 
 sub _sock_up {
   my ($kernel,$self,$socket) = @_[KERNEL,OBJECT,ARG0];
+  my ($filter);
 
   delete ( $self->{socketfactory} );
+
+  if ( $self->{buggyidentd} ) {
+	$filter = POE::Filter::Line->new();
+  } else {
+	$filter = POE::Filter::Line->new( Literal => "\x0D\x0A" );
+  }
 
   $self->{socket} = new POE::Wheel::ReadWrite
   (
         Handle => $socket,
         Driver => POE::Driver::SysRW->new(),
-        Filter => POE::Filter::Line->new( Literal => "\x0D\x0A" ),
+        Filter => $filter,
         InputEvent => '_parse_line',
         ErrorEvent => '_sock_down',
   );
@@ -166,6 +173,9 @@ sub _parse_arguments {
         if ( defined ( $hash{'IdentPort'} ) ) {
 	  $returns[4] = $hash{'IdentPort'};
         }
+	if ( defined ( $hash{'BuggyIdentd'} ) and $hash{'BuggyIdentd'} == 1 ) {
+	  $returns[5] = $hash{'BuggyIdentd'};
+	}
 	if ( defined ( $hash{'Socket'} ) ) {
 	  $returns[0] = inet_ntoa( (unpack_sockaddr_in( getpeername $hash{'Socket'} ))[1] );
     	  $returns[1] = (unpack_sockaddr_in( getpeername $hash{'Socket'} ))[0];
@@ -200,6 +210,8 @@ POE::Component::Client::Ident::Agent - A component to provide a one-shot non-blo
 						Socket   => $socket_handle # Or pass in a socket handle
 						IdentPort => 113	   # Port to send queries to on originator
 									   # Default shown
+						BuggyIdentd => 0	   # Dealing with an Identd that isn't
+									   # RFC compatable. Default is 0.
 						);
 
   sub _child {
@@ -238,6 +250,8 @@ Takes either the arguments: PeerAddr, the remote IP address where a TCP connecti
 where the TCP has originated from; SockAddr, the address of our end of the connection; SockPort, the port of our end of 
 the connection; OR: Socket, the socket handle of the connection, the component will work out all the details for you. If Socket is defined, it will override the settings of the other arguments, except for IdentPort, which is the port on the remote 
 host where we send our ident queries. This is optional, defaults to 113.
+
+You may also specify BuggyIdentd to 1, to support Identd that don't terminate lines as per the RFC.
 
 There is no return value.
 
