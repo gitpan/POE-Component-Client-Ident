@@ -16,7 +16,7 @@ use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '0.3';
+$VERSION = '0.4';
 
 sub spawn {
     my ($package) = shift;
@@ -54,6 +54,7 @@ sub _start {
     $self->{ident_filter} = POE::Filter::Ident->new();
     #$self->{ident_filter}->debug(1);
     $self->{session} = $session;
+    $kernel->delay( '_time_out' => $self->{timeout} );
     $self->{socketfactory} = POE::Wheel::SocketFactory->new(
                                         SocketDomain => AF_INET,
                                         SocketType => SOCK_STREAM,
