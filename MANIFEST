@@ -6,3 +6,4 @@ Filter-Ident.pm
 MANIFEST
 Makefile.PL
 t/1.t
+META.yml                                 Module meta-data (added by MakeMaker)

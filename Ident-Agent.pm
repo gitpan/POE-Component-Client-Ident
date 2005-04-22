@@ -16,19 +16,19 @@ use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '0.4';
+$VERSION = '0.6';
 
 sub spawn {
     my ($package) = shift;
     my $sender = $poe_kernel->get_active_session;
 
-    my ($peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout) = _parse_arguments(@_);
+    my ($peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference) = _parse_arguments(@_);
  
     unless ( $peeraddr and $peerport and $sockaddr and $sockport ) {
         croak "Not enough arguments supplied to $package->spawn";
     }
 
-    my $self = $package->new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout);
+    my $self = $package->new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference);
 
     POE::Session->create(
         object_states => [
@@ -38,22 +38,14 @@ sub spawn {
 }
 
 sub new {
-    my ( $package, $sender, $peeraddr, $peerport, $sockaddr, $sockport, $identport, $buggyidentd, $timeout ) = @_;
-    return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd, timeout => $timeout }, $package;
-}
-
-sub get_session {
-  my ($self) = shift;
-
-  return $self->{session};
+    my ( $package, $sender, $peeraddr, $peerport, $sockaddr, $sockport, $identport, $buggyidentd, $timeout, $reference) = @_;
+    return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd, timeout => $timeout, reference => $reference }, $package;
 }
 
 sub _start {
     my ( $kernel, $self, $session ) = @_[ KERNEL, OBJECT, SESSION ];
 
     $self->{ident_filter} = POE::Filter::Ident->new();
-    #$self->{ident_filter}->debug(1);
-    $self->{session} = $session;
     $kernel->delay( '_time_out' => $self->{timeout} );
     $self->{socketfactory} = POE::Wheel::SocketFactory->new(
                                         SocketDomain => AF_INET,
@@ -66,7 +58,7 @@ sub _start {
                                         ( $self->{sockaddr} ? (BindAddress => $self->{sockaddr}) : () ),
     );
     $self->{query_string} = $self->{peerport} . ", " . $self->{sockport};
-    $self->{query} = { PeerAddr => $self->{peeraddr}, PeerPort => $self->{peerport}, SockAddr => $self->{sockaddr}, SockPort => $self->{sockport} };
+    $self->{query} = { PeerAddr => $self->{peeraddr}, PeerPort => $self->{peerport}, SockAddr => $self->{sockaddr}, SockPort => $self->{sockport}, Reference => $self->{reference} };
 }
 
 sub _sock_up {
@@ -113,13 +105,17 @@ sub _sock_failed {
   my ($kernel, $self) = @_[KERNEL,OBJECT];
 
   $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
+  delete( $self->{socketfactory} );
+  return 1;
 }
 
 sub _time_out {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
 
   $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
+  delete( $self->{socketfactory} );
   delete ( $self->{socket} );
+  return 1;
 }
 
 sub _parse_line {
@@ -171,6 +167,9 @@ sub _parse_arguments {
 
   # If we get a socket it takes precedence over any other arguments
   SWITCH: {
+	if ( defined ( $hash{'Reference'} ) ) {
+	  $returns[7] = $hash{'Reference'};
+	}
         if ( defined ( $hash{'IdentPort'} ) ) {
 	  $returns[4] = $hash{'IdentPort'};
         }
@@ -208,16 +207,17 @@ POE::Component::Client::Ident::Agent - A component to provide a one-shot non-blo
   use POE::Component::Client::Ident::Agent;
 
   POE::Component::Client::Ident::Agent->spawn( 
-						PeerAddr => "192.168.1.12" # Originating IP Address
-						PeerPort => 12345	   # Originating port
-						SockAddr => "192.168.2.24" # Local IP address
-						SockPort => 69 		   # Local Port
-						Socket   => $socket_handle # Or pass in a socket handle
-						IdentPort => 113	   # Port to send queries to on originator
-									   # Default shown
-						BuggyIdentd => 0	   # Dealing with an Identd that isn't
-									   # RFC compatable. Default is 0.
-						TimeOut => 30		   # Adjust the timeout period.
+						PeerAddr => "192.168.1.12", # Originating IP Address
+						PeerPort => 12345,	    # Originating port
+						SockAddr => "192.168.2.24", # Local IP address
+						SockPort => 69,		    # Local Port
+						Socket   => $socket_handle, # Or pass in a socket handle
+						IdentPort => 113,	    # Port to send queries to on originator
+									    # Default shown
+						BuggyIdentd => 0,	    # Dealing with an Identd that isn't
+									    # RFC compatable. Default is 0.
+						TimeOut => 30,		    # Adjust the timeout period.
+						Reference => $scalar	    # Give the component a reference
 						);
 
   sub _child {
@@ -261,6 +261,8 @@ You may also specify BuggyIdentd to 1, to support Identd that doesn't terminate 
 
 You may also specify TimeOut between 5 and 30, to have a shorter timeout in seconds on waiting for a response from the Identd. Default is 30 seconds.
 
+Optionally, you can specify Reference, which is anything that'll fit in a scalar. This will get passed back as part of the response. See below.
+
 There is no return value.
 
 =back
@@ -268,7 +270,7 @@ There is no return value.
 =head1 OUTPUT
 
 All the events returned by the component have a hashref as ARG0. This hashref contains the arguments that were passed to
-the component. If a socket handle was passed, the hashref will contain the appropriate PeerAddr, PeerPort, SockAddr and SockPort.
+the component. If a socket handle was passed, the hashref will contain the appropriate PeerAddr, PeerPort, SockAddr and SockPort. If the component was spawned with a Reference parameter, this will be passed back as a key of the hashref.
 
 The following events are sent to the calling session by the component:
 

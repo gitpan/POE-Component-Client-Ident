@@ -13,7 +13,7 @@ use POE::Component::Client::Ident::Agent;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.4';
+$VERSION = '0.6';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
@@ -29,6 +29,8 @@ sub spawn {
 		$self => [qw(_start _child shutdown query ident_agent_reply ident_agent_error)],
         ],
     );
+
+    return $self;
 }
 
 sub new {
@@ -48,8 +50,6 @@ sub _child {
 
   if ( $what eq 'create' ) {
     # Stuff here to match up to our query
-    my ($ref) = $_[ARG2];
-    $self->{queries}->{ $ref->{SockAddr} }->{ $ref->{SockPort} }->{ $ref->{PeerAddr} }->{ $ref->{PeerPort} }->{Agent} = $child;
     $self->{children}->{$child} = 1;
   }
   if ( $what eq 'lose' ) {
@@ -78,16 +78,18 @@ sub query {
     croak "Not enough arguments/items for $package->query";
   }
 
-  $self->{queries}->{$sockaddr}->{$sockport}->{$peeraddr}->{$peerport}->{Requester} = $sender;
+  $kernel->refcount_increment( $sender->ID() => __PACKAGE__ );
 
-  POE::Component::Client::Ident::Agent->spawn( @_[ARG0 .. $#_] );
+  POE::Component::Client::Ident::Agent->spawn( @_[ARG0 .. $#_], Reference => $sender->ID() );
+  return 1;
 }
 
 sub ident_agent_reply {
   my ($kernel,$self,$ref) = @_[KERNEL,OBJECT,ARG0];
 
-  my ($requester) = $self->{queries}->{ $ref->{SockAddr} }->{ $ref->{SockPort} }->{ $ref->{PeerAddr} }->{ $ref->{PeerPort} }->{Requester};
-  $kernel->post( $requester, 'ident_client_reply' , @_[ARG0 .. $#_] );
+  my ($requester) = delete ( $ref->{Reference} );
+  $kernel->post( $requester, 'ident_client_reply' , $ref, @_[ARG1 .. $#_] );
+  $kernel->refcount_decrement( $requester => __PACKAGE__ );
   
   # TODO: write a better harvest routine than this. Parse back up the list of refs and find empty ones.
   delete ( $self->{queries}->{ $ref->{SockAddr} }->{ $ref->{SockPort} }->{ $ref->{PeerAddr} }->{ $ref->{PeerPort} } );
@@ -96,11 +98,9 @@ sub ident_agent_reply {
 sub ident_agent_error {
   my ($kernel,$self,$ref) = @_[KERNEL,OBJECT,ARG0];
 
-  my ($requester) = $self->{queries}->{ $ref->{SockAddr} }->{ $ref->{SockPort} }->{ $ref->{PeerAddr} }->{ $ref->{PeerPort} }->{Requester};
-  $kernel->post( $requester, 'ident_client_error' , @_[ARG0 .. $#_] );
-  
-  # TODO: write a better harvest routine than this. Parse back up the list of refs and find empty ones.
-  delete ( $self->{queries}->{ $ref->{SockAddr} }->{ $ref->{SockPort} }->{ $ref->{PeerAddr} }->{ $ref->{PeerPort} } );
+  my ($requester) = delete ( $ref->{Reference} );
+  $kernel->post( $requester, 'ident_client_error', $ref, @_[ARG1 .. $#_] );
+  $kernel->refcount_decrement( $requester => __PACKAGE__ );
 }
 
 sub _parse_arguments {

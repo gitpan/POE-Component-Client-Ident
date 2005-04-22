@@ -1,6 +1,12 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+0.6	Fri Apr 22 12:00:56 BST 2005
+	- Hopefully fixed the issues that _pRiVi was having.
+
+0.5	Sat Apr 16 11:26:37 BST 2005
+	- _pRiVi @ MAGnet teased a bug in _time_out.
+
 0.4	Tue Feb  8 12:55:40 GMT 2005
 	- Added an additional delay _time_out to Ident-Agent.pm, so
 	  that it'll properly timeout on firewalled hosts/ports.
