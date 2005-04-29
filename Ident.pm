@@ -8,12 +8,13 @@
 package POE::Component::Client::Ident;
 
 use strict;
+use Socket;
 use POE;
 use POE::Component::Client::Ident::Agent;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.6';
+$VERSION = '0.7';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
@@ -50,10 +51,10 @@ sub _child {
 
   if ( $what eq 'create' ) {
     # Stuff here to match up to our query
-    $self->{children}->{$child} = 1;
+    $self->{children}->{ $child->ID() } = 1;
   }
   if ( $what eq 'lose' ) {
-    delete ( $self->{children}->{$child} );
+    delete ( $self->{children}->{ $child->ID() } );
   }
 }
 

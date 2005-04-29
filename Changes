@@ -1,6 +1,11 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+0.7	Fri Apr 29 10:51:22 BST 2005
+	- Amended Ident.pm so that it only stashes child session IDs
+	  not the session objects themselves.
+	- Doh, had forgotten to include 'use Socket' in Ident.pm.
+
 0.6	Fri Apr 22 12:00:56 BST 2005
 	- Hopefully fixed the issues that _pRiVi was having.
 
