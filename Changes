@@ -1,6 +1,9 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+0.8	Thu Nov  3 12:55:56 GMT 2005
+	- Changed Ident-Agent API to be objectified.
+
 0.7	Fri Apr 29 10:51:22 BST 2005
 	- Amended Ident.pm so that it only stashes child session IDs
 	  not the session objects themselves.

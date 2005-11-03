@@ -16,7 +16,7 @@ use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '0.7';
+$VERSION = '0.8';
 
 sub spawn {
     my ($package) = shift;
@@ -30,11 +30,14 @@ sub spawn {
 
     my $self = $package->new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference);
 
-    POE::Session->create(
+    $self->{session_id} = POE::Session->create(
         object_states => [
-            $self => [qw(_start _sock_up _sock_down _sock_failed _parse_line _time_out shutdown)],
+	    $self => { shutdown => '_shutdown', },
+            $self => [qw(_start _sock_up _sock_down _sock_failed _parse_line _time_out)],
         ],
-    );
+    )->ID();
+
+    return $self;
 }
 
 sub new {
@@ -42,9 +45,14 @@ sub new {
     return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd, timeout => $timeout, reference => $reference }, $package;
 }
 
+sub session_id {
+  return $_[0]->{session_id};
+}
+
 sub _start {
     my ( $kernel, $self, $session ) = @_[ KERNEL, OBJECT, SESSION ];
 
+    $self->{session_id} = $session->ID();
     $self->{ident_filter} = POE::Filter::Ident->new();
     $kernel->delay( '_time_out' => $self->{timeout} );
     $self->{socketfactory} = POE::Wheel::SocketFactory->new(
@@ -59,6 +67,7 @@ sub _start {
     );
     $self->{query_string} = $self->{peerport} . ", " . $self->{sockport};
     $self->{query} = { PeerAddr => $self->{peeraddr}, PeerPort => $self->{peerport}, SockAddr => $self->{sockaddr}, SockPort => $self->{sockport}, Reference => $self->{reference} };
+    undef;
 }
 
 sub _sock_up {
@@ -88,6 +97,7 @@ sub _sock_up {
   
   $self->{socket}->put($self->{query_string});
   $kernel->delay( '_time_out' => $self->{timeout} );
+  undef;
 }
 
 sub _sock_down {
@@ -98,6 +108,7 @@ sub _sock_down {
   }
   delete ( $self->{socket} );
   $kernel->delay( '_time_out' => undef );
+  undef;
 }
 
 
@@ -141,14 +152,22 @@ sub _parse_line {
   $kernel->delay( '_time_out' => undef );
   $self->{had_a_response} = 1;
   delete ( $self->{socket} );
+  undef;
 }
 
 sub shutdown {
+  my ($self) = shift;
+
+  $poe_kernel->call( $self->session_id() => 'shutdown' => @_ );
+}
+
+sub _shutdown {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
   
   $self->{had_a_response} = 1;
   delete ( $self->{socket} );
   $kernel->delay( '_time_out' => undef );
+  undef;
 }
 
 sub _port_pair_matches {
@@ -206,7 +225,7 @@ POE::Component::Client::Ident::Agent - A component to provide a one-shot non-blo
 
   use POE::Component::Client::Ident::Agent;
 
-  POE::Component::Client::Ident::Agent->spawn( 
+  my $poco = POE::Component::Client::Ident::Agent->spawn( 
 						PeerAddr => "192.168.1.12", # Originating IP Address
 						PeerPort => 12345,	    # Originating port
 						SockAddr => "192.168.2.24", # Local IP address
@@ -246,7 +265,7 @@ some future point will receive either a 'ident_agent_reply' or 'ident_agent_erro
 If you are looking for a robust method of managing Ident::Agent sessions then please consult the documentation for 
 L<POE::Component::Client::Ident|POE::Component::Client::Ident>, which takes care of Agent management for you.
 
-=head1 METHODS
+=head1 CONSTRUCTOR 
 
 =over
 
@@ -263,7 +282,21 @@ You may also specify TimeOut between 5 and 30, to have a shorter timeout in seco
 
 Optionally, you can specify Reference, which is anything that'll fit in a scalar. This will get passed back as part of the response. See below.
 
-There is no return value.
+Returns an POE::Component::Client::Ident::Agent object, which has the following methods.
+
+=back
+
+=head1 METHODS
+
+=over
+
+=item session_id
+
+Returns the POE session ID of the component.
+
+=item shutdown
+
+Terminates the component.
 
 =back
 
@@ -285,10 +318,6 @@ the userid or something else depending on whether the opsys field is set to 'OTH
 
 Returned when the component receives an ERROR response from the identd, there was some sort of communication error with the
 remote host ( ie. no identd running ) or it had some other problem with making the connection to the other host. No matter. ARG0 is hashref, ARG1 is the type of error.
-
-=item _child
-
-Returned when the component starts. This is a good way of getting the session id of your component. See L<POE::Session|POE::Session> for more details, but if ARG0 eq 'create', then ARG2 will be a hashref as discussed above.
 
 =back
 
