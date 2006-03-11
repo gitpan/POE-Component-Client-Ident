@@ -8,18 +8,18 @@
 package POE::Component::Client::Ident::Agent;
 
 use strict;
+use warnings;
 use POE qw( Wheel::SocketFactory Wheel::ReadWrite Driver::SysRW
-            Filter::Line Filter::Stream );
-use POE::Filter::Ident;
+            Filter::Line Filter::Stream Filter::Ident);
 use Carp;
 use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '0.8';
+$VERSION = '0.9';
 
 sub spawn {
-    my ($package) = shift;
+    my $package = shift;
     my $sender = $poe_kernel->get_active_session;
 
     my ($peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference) = _parse_arguments(@_);
@@ -72,9 +72,9 @@ sub _start {
 
 sub _sock_up {
   my ($kernel,$self,$socket) = @_[KERNEL,OBJECT,ARG0];
-  my ($filter);
+  my $filter;
 
-  delete ( $self->{socketfactory} );
+  delete $self->{socketfactory};
 
   if ( $self->{buggyidentd} ) {
 	$filter = POE::Filter::Line->new();
@@ -106,7 +106,7 @@ sub _sock_down {
   unless ( $self->{had_a_response} ) {
     $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
   }
-  delete ( $self->{socket} );
+  delete $self->{socket};
   $kernel->delay( '_time_out' => undef );
   undef;
 }
@@ -116,22 +116,22 @@ sub _sock_failed {
   my ($kernel, $self) = @_[KERNEL,OBJECT];
 
   $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
-  delete( $self->{socketfactory} );
-  return 1;
+  delete $self->{socketfactory};
+  undef;
 }
 
 sub _time_out {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
 
   $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
-  delete( $self->{socketfactory} );
-  delete ( $self->{socket} );
-  return 1;
+  delete $self->{socketfactory};
+  delete $self->{socket};
+  undef;
 }
 
 sub _parse_line {
   my ($kernel,$self,$line) = @_[KERNEL,OBJECT,ARG0];
-  my (@cooked);
+  my @cooked;
 
   @cooked = @{$self->{ident_filter}->get( [$line] )};
 
@@ -151,21 +151,19 @@ sub _parse_line {
   }
   $kernel->delay( '_time_out' => undef );
   $self->{had_a_response} = 1;
-  delete ( $self->{socket} );
+  delete $self->{socket};
   undef;
 }
 
 sub shutdown {
-  my ($self) = shift;
-
+  my $self = shift;
   $poe_kernel->call( $self->session_id() => 'shutdown' => @_ );
 }
 
 sub _shutdown {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
-  
   $self->{had_a_response} = 1;
-  delete ( $self->{socket} );
+  delete $self->{socket};
   $kernel->delay( '_time_out' => undef );
   undef;
 }
@@ -182,7 +180,7 @@ sub _port_pair_matches {
 
 sub _parse_arguments {
   my ( %hash ) = @_;
-  my (@returns);
+  my @returns;
 
   # If we get a socket it takes precedence over any other arguments
   SWITCH: {

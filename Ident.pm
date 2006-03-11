@@ -8,22 +8,20 @@
 package POE::Component::Client::Ident;
 
 use strict;
+use warnings;
 use Socket;
-use POE;
-use POE::Component::Client::Ident::Agent;
+use POE qw(Component::Client::Ident::Agent);
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.8';
+$VERSION = '0.9';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
 
-    unless ( $alias ) {
-	croak "You must supply a kernel alias to $package->spawn";
-    }
+    croak "You must supply a kernel alias to $package->spawn" unless $alias;
 
-    my $self = $package->new( $alias );
+    my $self = bless { Alias => $alias }, $package;
 
     POE::Session->create (
 	object_states => [ 
@@ -34,16 +32,10 @@ sub spawn {
     return $self;
 }
 
-sub new {
-  my ($package,$alias) = @_;
-
-  return bless { Alias => $alias }, $package;
-}
-
 sub _start {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
-
   $kernel->alias_set( $self->{Alias} );
+  undef;
 }
 
 sub _child {
@@ -56,17 +48,14 @@ sub _child {
   if ( $what eq 'lose' ) {
     delete ( $self->{children}->{ $child->ID() } );
   }
+  undef;
 }
 
 sub shutdown {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
-
-  # Stuff here to terminate currently running Agents
-  foreach ( keys %{ $self->{children} } ) {
-    $kernel->call( $_ => 'shutdown' );
-  }
-
+  $kernel->call( $_ => 'shutdown' ) for keys %{ $self->{children} };
   $kernel->alias_remove ( $self->{Alias} );
+  undef;
 }
 
 sub query {
@@ -88,25 +77,25 @@ sub query {
 sub ident_agent_reply {
   my ($kernel,$self,$ref) = @_[KERNEL,OBJECT,ARG0];
 
-  my ($requester) = delete ( $ref->{Reference} );
+  my $requester = delete $ref->{Reference};
   $kernel->post( $requester, 'ident_client_reply' , $ref, @_[ARG1 .. $#_] );
   $kernel->refcount_decrement( $requester => __PACKAGE__ );
   
   # TODO: write a better harvest routine than this. Parse back up the list of refs and find empty ones.
-  delete ( $self->{queries}->{ $ref->{SockAddr} }->{ $ref->{SockPort} }->{ $ref->{PeerAddr} }->{ $ref->{PeerPort} } );
+  delete $self->{queries}->{ $ref->{SockAddr} }->{ $ref->{SockPort} }->{ $ref->{PeerAddr} }->{ $ref->{PeerPort} };
 }
 
 sub ident_agent_error {
   my ($kernel,$self,$ref) = @_[KERNEL,OBJECT,ARG0];
 
-  my ($requester) = delete ( $ref->{Reference} );
+  my $requester = delete $ref->{Reference};
   $kernel->post( $requester, 'ident_client_error', $ref, @_[ARG1 .. $#_] );
   $kernel->refcount_decrement( $requester => __PACKAGE__ );
 }
 
 sub _parse_arguments {
   my ( %hash ) = @_;
-  my (@returns);
+  my @returns;
 
   # If we get a socket it takes precedence over any other arguments
   SWITCH: {
