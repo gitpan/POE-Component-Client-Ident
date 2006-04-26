@@ -1,6 +1,10 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+1.00	Wed Apr 26 13:48:34 BST 2006
+	- Minor code revisions
+	- switched test script to Test::More
+
 0.8	Thu Nov  3 12:55:56 GMT 2005
 	- Changed Ident-Agent API to be objectified.
 

@@ -14,7 +14,7 @@ use POE qw(Component::Client::Ident::Agent);
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.9';
+$VERSION = '1.00';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
@@ -46,7 +46,7 @@ sub _child {
     $self->{children}->{ $child->ID() } = 1;
   }
   if ( $what eq 'lose' ) {
-    delete ( $self->{children}->{ $child->ID() } );
+    delete $self->{children}->{ $child->ID() };
   }
   undef;
 }
@@ -71,35 +71,32 @@ sub query {
   $kernel->refcount_increment( $sender->ID() => __PACKAGE__ );
 
   POE::Component::Client::Ident::Agent->spawn( @_[ARG0 .. $#_], Reference => $sender->ID() );
-  return 1;
+  undef;
 }
 
 sub ident_agent_reply {
   my ($kernel,$self,$ref) = @_[KERNEL,OBJECT,ARG0];
-
   my $requester = delete $ref->{Reference};
   $kernel->post( $requester, 'ident_client_reply' , $ref, @_[ARG1 .. $#_] );
   $kernel->refcount_decrement( $requester => __PACKAGE__ );
-  
-  # TODO: write a better harvest routine than this. Parse back up the list of refs and find empty ones.
-  delete $self->{queries}->{ $ref->{SockAddr} }->{ $ref->{SockPort} }->{ $ref->{PeerAddr} }->{ $ref->{PeerPort} };
+  undef;
 }
 
 sub ident_agent_error {
   my ($kernel,$self,$ref) = @_[KERNEL,OBJECT,ARG0];
-
   my $requester = delete $ref->{Reference};
   $kernel->post( $requester, 'ident_client_error', $ref, @_[ARG1 .. $#_] );
   $kernel->refcount_decrement( $requester => __PACKAGE__ );
+  undef;
 }
 
 sub _parse_arguments {
-  my ( %hash ) = @_;
+  my %hash = @_;
   my @returns;
 
   # If we get a socket it takes precedence over any other arguments
   SWITCH: {
-        if ( defined ( $hash{'Socket'} ) ) {
+        if ( defined $hash{'Socket'} ) {
           $returns[0] = inet_ntoa( (unpack_sockaddr_in( getpeername $hash{'Socket'} ))[1] );
           $returns[1] = (unpack_sockaddr_in( getpeername $hash{'Socket'} ))[0];
           $returns[2] = inet_ntoa( (unpack_sockaddr_in( getsockname $hash{'Socket'} ))[1] );
@@ -107,8 +104,7 @@ sub _parse_arguments {
           $returns[4] = $hash{'Socket'};
           last SWITCH;
         }
-        if ( defined ( $hash{'PeerAddr'} ) and defined ( $hash{'PeerPort'} ) and defined ( $hash{'SockAddr'} ) and defined ( $
-hash{'SockAddr'} ) ) {
+        if ( defined $hash{'PeerAddr'} and defined $hash{'PeerPort'} and defined $hash{'SockAddr'} and defined $hash{'SockAddr'} ) {
           $returns[0] = $hash{'PeerAddr'};
           $returns[1] = $hash{'PeerPort'};
           $returns[2] = $hash{'SockAddr'};

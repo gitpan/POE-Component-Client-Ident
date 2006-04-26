@@ -1,30 +1,13 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl 1.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
-#use Test::More tests => 1;
-#BEGIN { use_ok('POE::Component::Client::Ident') };
-
-#########################
-
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
-
-my (@tests) = ( "not ok 2", "not ok 3" );
-
-$|=1;
-print "1..3\n";
+use Test::More tests => 5;
+BEGIN { use_ok('POE::Component::Client::Ident') };
+diag( "Testing POE::Component::Client::Ident $POE::Component::Client::Ident::VERSION, Perl $], $^X" );
 
 use Socket;
 use POE qw(Wheel::SocketFactory Wheel::ReadWrite);
-use POE::Component::Client::Ident;
 
-POE::Component::Client::Ident->spawn ( 'Ident-Client' );
+my $self = POE::Component::Client::Ident->spawn ( 'Ident-Client' );
 
-print "ok 1\n";
+isa_ok( $self, 'POE::Component::Client::Ident' );
 
 POE::Session->create
   ( inline_states =>
@@ -41,8 +24,8 @@ POE::Session->create
     heap => { Port1 => 12345, Port2 => 123, UserID => 'bingos' },
   );
 
-POE::Kernel->run();
-exit;
+$poe_kernel->run();
+exit 0;
 
 sub server_start {
     $_[HEAP]->{server} = POE::Wheel::SocketFactory->new
@@ -56,19 +39,18 @@ sub server_start {
     $_[KERNEL]->post ( 'Ident-Client' => query => IdentPort => $our_port, PeerAddr => '127.0.0.1', PeerPort => $_[HEAP]->{Port1}, SockAddr => '127.0.0.1', SockPort => $_[HEAP]->{Port2} );
 
     $_[KERNEL]->delay ( 'close_all' => 60 );
+    undef;
 }
 
 sub server_stop {
-
-  foreach ( @tests ) {
-	print "$_\n";
-  }
-
+  pass("Server stop");
+  undef;
 }
 
 sub close_down_server {
   $_[KERNEL]->call ( 'Ident-Client' => 'shutdown' );
   delete $_[HEAP]->{server};
+  undef;
 }
 
 sub server_accepted {
@@ -81,6 +63,7 @@ sub server_accepted {
 	Filter => POE::Filter::Line->new( Literal => "\x0D\x0A" ),
       );
     $_[HEAP]->{client}->{ $wheel->ID() } = $wheel;
+    undef;
 }
 
 sub client_input {
@@ -90,34 +73,35 @@ sub client_input {
     my ($port1,$port2) = split ( /\s*,\s*/, $input );
     if ( $port1 == $heap->{Port1} and $port2 == $heap->{Port2} ) {
       $heap->{client}->{$wheel_id}->put( "$port1 , $port2 : USERID : UNIX : " . $heap->{UserID} );
-      $tests[0] = "ok 2";
+      pass("Correct response from client");
     } else {
       $heap->{client}->{$wheel_id}->put( "$port1 , $port2 : ERROR : UNKNOWN-ERROR");
     }
+    undef;
 }
 
 sub client_error {
     my ( $heap, $wheel_id ) = @_[ HEAP, ARG3 ];
     delete $heap->{client}->{$wheel_id};
+    undef;
 }
 
 sub server_error {
     delete $_[HEAP]->{server};
+    undef;
 }
 
 sub ident_client_reply {
   my ($kernel,$heap,$ref,$opsys,$userid) = @_[KERNEL,HEAP,ARG0,ARG1,ARG2];
-
-  if ( $userid eq $heap->{UserID} ) {
-    $tests[1] = "ok 3";
-  }
+  ok( $userid eq $heap->{UserID}, "USERID Test" );
   $kernel->delay( 'close_all' => undef );
   $kernel->yield( 'close_all' );
+  undef;
 }
 
 sub ident_client_error {
   my ($kernel,$heap) = @_[KERNEL,HEAP];
-
   $kernel->delay( 'close_all' => undef );
   $kernel->yield( 'close_all' );
+  undef;
 }

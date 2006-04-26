@@ -16,7 +16,7 @@ use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '0.9';
+$VERSION = '1.00';
 
 sub spawn {
     my $package = shift;
@@ -91,11 +91,8 @@ sub _sock_up {
         ErrorEvent => '_sock_down',
   );
 
-  unless ( $self->{socket} ) {
-     $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
-  }
-  
-  $self->{socket}->put($self->{query_string});
+  $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" ) unless $self->{socket};
+  $self->{socket}->put($self->{query_string}) if $self->{socket};
   $kernel->delay( '_time_out' => $self->{timeout} );
   undef;
 }
@@ -103,9 +100,7 @@ sub _sock_up {
 sub _sock_down {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
 
-  unless ( $self->{had_a_response} ) {
-    $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
-  }
+  $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" ) unless $self->{had_a_response};
   delete $self->{socket};
   $kernel->delay( '_time_out' => undef );
   undef;
@@ -171,10 +166,7 @@ sub _shutdown {
 sub _port_pair_matches {
   my ($self) = shift;
   my ($port1,$port2) = @_;
-
-  if ( $port1 == $self->{peerport} and $port2 == $self->{sockport} ) {
-	return 1;
-  }
+  return 1 if $port1 == $self->{peerport} and $port2 == $self->{sockport};
   return 0;
 }
 
