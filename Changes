@@ -1,6 +1,10 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+1.01	Fri May 19 16:41:56 BST 2006
+	- Minor bug in Agent.pm was causing two error events to be
+	  generated in the case of a socket error.
+
 1.00	Wed Apr 26 13:48:34 BST 2006
 	- Minor code revisions
 	- switched test script to Test::More

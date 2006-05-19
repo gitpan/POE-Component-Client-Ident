@@ -7,6 +7,7 @@
 
 package POE::Component::Client::Ident::Agent;
 
+use 5.006;
 use strict;
 use warnings;
 use POE qw( Wheel::SocketFactory Wheel::ReadWrite Driver::SysRW
@@ -16,7 +17,7 @@ use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '1.00';
+$VERSION = '1.01';
 
 sub spawn {
     my $package = shift;
@@ -111,6 +112,7 @@ sub _sock_failed {
   my ($kernel, $self) = @_[KERNEL,OBJECT];
 
   $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
+  $kernel->delay( '_time_out' => undef );
   delete $self->{socketfactory};
   undef;
 }

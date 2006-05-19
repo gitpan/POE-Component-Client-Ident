@@ -7,6 +7,7 @@
 
 package POE::Component::Client::Ident;
 
+use 5.006;
 use strict;
 use warnings;
 use Socket;
@@ -14,7 +15,7 @@ use POE qw(Component::Client::Ident::Agent);
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.00';
+$VERSION = '1.01';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
