@@ -12,7 +12,7 @@ use strict;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.1';
+$VERSION = '1.0';
 
 sub new {
   my $class = shift;
@@ -129,29 +129,33 @@ POE::Component::Client::Ident::Agent. They look like this:
 
     { name => 'event name', args => [ some info about the event ] }
 
+=head1 CONSTRUCTOR
+
+=over
+
+=item new
+
+Creates a new POE::Filter::Ident object. Takes no arguments.
+
+=back
+
 =head1 METHODS
 
 =over
 
-=item *
-
-new
-
-Creates a new POE::Filter::Ident object. Takes no arguments.
-
-=item *
-
-get
+=item get
 
 Takes an array reference full of lines of raw Ident text. Returns an
 array reference of processed, pasteurized events.
 
-=item *
-
-put
+=item put
 
 There is no "put" method. That would be kinda silly for this filter,
 don't you think?
+
+=item debug
+
+Pass true/false value to enable/disable debugging information.
 
 =back
 

@@ -1,9 +1,11 @@
 README
 Changes
-Ident.pm
-Ident-Agent.pm
-Filter-Ident.pm
+lib/POE/Component/Client/Ident.pm
+lib/POE/Component/Client/Ident/Agent.pm
+lib/POE/Filter/Ident.pm
 MANIFEST
 Makefile.PL
 t/1.t
+t/2.t
+t/3.t
 META.yml                                 Module meta-data (added by MakeMaker)

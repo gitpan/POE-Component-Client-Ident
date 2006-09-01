@@ -17,7 +17,7 @@ use Socket;
 use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '1.01';
+$VERSION = '1.02';
 
 sub spawn {
     my $package = shift;
@@ -29,7 +29,7 @@ sub spawn {
         croak "Not enough arguments supplied to $package->spawn";
     }
 
-    my $self = $package->new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference);
+    my $self = $package->_new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference);
 
     $self->{session_id} = POE::Session->create(
         object_states => [
@@ -41,7 +41,7 @@ sub spawn {
     return $self;
 }
 
-sub new {
+sub _new {
     my ( $package, $sender, $peeraddr, $peerport, $sockaddr, $sockport, $identport, $buggyidentd, $timeout, $reference) = @_;
     return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd, timeout => $timeout, reference => $reference }, $package;
 }
@@ -263,10 +263,21 @@ L<POE::Component::Client::Ident|POE::Component::Client::Ident>, which takes care
 
 =item spawn
 
-Takes either the arguments: PeerAddr, the remote IP address where a TCP connection has originated; PeerPort, the port
-where the TCP has originated from; SockAddr, the address of our end of the connection; SockPort, the port of our end of 
-the connection; OR: Socket, the socket handle of the connection, the component will work out all the details for you. If Socket is defined, it will override the settings of the other arguments, except for IdentPort, which is the port on the remote 
-host where we send our ident queries. This is optional, defaults to 113.
+Takes either the arguments: 
+
+  "PeerAddr", the remote IP address where a TCP connection has originated; 
+  "PeerPort", the port where the TCP has originated from;
+  "SockAddr", the address of our end of the connection; 
+  "SockPort", the port of our end of the connection;
+
+OR: 
+
+  "Socket", the socket handle of the connection, the component will work out all the 
+  details for you. If Socket is defined, it will override the settings of the other arguments, 
+  except for:
+
+  "IdentPort", which is the port on the remote host where we send our ident queries.
+  This is optional, defaults to 113.
 
 You may also specify BuggyIdentd to 1, to support Identd that doesn't terminate lines as per the RFC.
 

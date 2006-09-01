@@ -15,7 +15,7 @@ use POE qw(Component::Client::Ident::Agent);
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.01';
+$VERSION = '1.02';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
@@ -26,7 +26,10 @@ sub spawn {
 
     POE::Session->create (
 	object_states => [ 
-		$self => [qw(_start _child shutdown query ident_agent_reply ident_agent_error)],
+		$self => [qw(_start _child shutdown query)],
+		$self => { ident_agent_reply => '_ident_agent_reply',
+			   ident_agent_error => '_ident_agent_error',
+		},
         ],
     );
 
@@ -75,7 +78,7 @@ sub query {
   undef;
 }
 
-sub ident_agent_reply {
+sub _ident_agent_reply {
   my ($kernel,$self,$ref) = @_[KERNEL,OBJECT,ARG0];
   my $requester = delete $ref->{Reference};
   $kernel->post( $requester, 'ident_client_reply' , $ref, @_[ARG1 .. $#_] );
@@ -83,7 +86,7 @@ sub ident_agent_reply {
   undef;
 }
 
-sub ident_agent_error {
+sub _ident_agent_error {
   my ($kernel,$self,$ref) = @_[KERNEL,OBJECT,ARG0];
   my $requester = delete $ref->{Reference};
   $kernel->post( $requester, 'ident_client_error', $ref, @_[ARG1 .. $#_] );
@@ -161,10 +164,20 @@ The component accepts the following events:
 
 =item query
 
-Takes either the arguments: PeerAddr, the remote IP address where a TCP connection has originated; PeerPort, the port
-where the TCP has originated from; SockAddr, the address of our end of the connection; SockPort, the port of our end of
-the connection; OR: Socket, the socket handle of the connection, the component will work out all the details for you. If Soc
-ket is defined, it will override the settings of the other arguments. See the documentation for Ident-Agent for extra parameters you may pass.
+Takes either the arguments: 
+
+  "PeerAddr", the remote IP address where a TCP connection has originated; 
+  "PeerPort", the port where the TCP has originated from;
+  "SockAddr", the address of our end of the connection; 
+  "SockPort", the port of our end of the connection;
+
+OR: 
+
+  "Socket", the socket handle of the connection, the component will work out all 
+  the details for you. If Socket is defined, it will override the settings of the 
+  other arguments.
+
+See the documentation for Ident-Agent for extra parameters you may pass.
 
 =item shutdown
 

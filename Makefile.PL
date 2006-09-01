@@ -4,16 +4,12 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
 			  'NAME'	=> 'POE::Component::Client::Ident',
-			  'PM'      => { 'Ident.pm' => '$(INST_LIBDIR)/Ident.pm',
-					 'Ident-Agent.pm' => '$(INST_LIBDIR)/Ident/Agent.pm',
-					 'Filter-Ident.pm' => '$(INST_LIBDIR)/../../Filter/Ident.pm',
-				       },
 			  'PREREQ_PM' => {
 							  'warnings' => 0,
 							  'POE'    => 0.06_07,
 							  'Carp'   => 0,
 							  'Socket' => 0,
 							 },
-			  'VERSION_FROM' => 'Ident.pm', # finds $VERSION
+			  'VERSION_FROM' => 'lib/POE/Component/Client/Ident.pm', # finds $VERSION
 			  'dist' => { 'COMPRESS' => 'gzip --best' },
 			 );

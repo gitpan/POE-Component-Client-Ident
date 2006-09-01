@@ -1,6 +1,6 @@
 use Test::More tests => 5;
 BEGIN { use_ok('POE::Component::Client::Ident') };
-diag( "Testing POE::Component::Client::Ident $POE::Component::Client::Ident::VERSION, Perl $], $^X" );
+diag( "Testing POE::Component::Client::Ident $POE::Component::Client::Ident::VERSION, POE $POE::VERSION, Perl $], $^X" );
 
 use Socket;
 use POE qw(Wheel::SocketFactory Wheel::ReadWrite);
