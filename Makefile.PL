@@ -1,6 +1,9 @@
-use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
+#use ExtUtils::MakeMaker;
+
+use inc::Module::Install;
+
+author 'Chris Williams <chris@bingosnet.co.uk>';
+license 'perl';
 
 WriteMakefile(
 			  'NAME'	=> 'POE::Component::Client::Ident',

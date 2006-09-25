@@ -14,10 +14,9 @@ use POE qw( Wheel::SocketFactory Wheel::ReadWrite Driver::SysRW
             Filter::Line Filter::Stream Filter::Ident);
 use Carp;
 use Socket;
-use Sys::Hostname;
 use vars qw($VERSION);
 
-$VERSION = '1.02';
+$VERSION = '1.03';
 
 sub spawn {
     my $package = shift;
@@ -134,7 +133,7 @@ sub _parse_line {
 
   foreach my $ev (@cooked) {
     if ( $ev->{name} eq 'barf' ) {
-	# Filter choked for whatever reason
+	# Filter choaked for whatever reason
         $kernel->post( $self->{sender}, $self->{event_prefix} . 'error', $self->{query}, "UKNOWN-ERROR" );
     } else {
       $ev->{name} = $self->{event_prefix} . $ev->{name};

@@ -1,11 +1,16 @@
-README
 Changes
+inc/Module/Install.pm
+inc/Module/Install/Base.pm
+inc/Module/Install/Makefile.pm
+inc/Module/Install/MakeMaker.pm
+inc/Module/Install/Metadata.pm
 lib/POE/Component/Client/Ident.pm
 lib/POE/Component/Client/Ident/Agent.pm
 lib/POE/Filter/Ident.pm
-MANIFEST
 Makefile.PL
+MANIFEST
+META.yml			Module meta-data (added by MakeMaker)
+README
 t/1.t
 t/2.t
 t/3.t
-META.yml                                 Module meta-data (added by MakeMaker)
