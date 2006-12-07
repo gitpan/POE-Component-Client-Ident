@@ -16,11 +16,10 @@ use Carp;
 use Socket;
 use vars qw($VERSION);
 
-$VERSION = '1.03';
+$VERSION = '1.04';
 
 sub spawn {
     my $package = shift;
-    my $sender = $poe_kernel->get_active_session;
 
     my ($peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference) = _parse_arguments(@_);
  
@@ -28,7 +27,7 @@ sub spawn {
         croak "Not enough arguments supplied to $package->spawn";
     }
 
-    my $self = $package->_new($sender,$peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference);
+    my $self = $package->_new($peeraddr,$peerport,$sockaddr,$sockport,$identport,$buggyidentd,$timeout,$reference);
 
     $self->{session_id} = POE::Session->create(
         object_states => [
@@ -41,8 +40,8 @@ sub spawn {
 }
 
 sub _new {
-    my ( $package, $sender, $peeraddr, $peerport, $sockaddr, $sockport, $identport, $buggyidentd, $timeout, $reference) = @_;
-    return bless { sender => $sender, event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd, timeout => $timeout, reference => $reference }, $package;
+    my ( $package, $peeraddr, $peerport, $sockaddr, $sockport, $identport, $buggyidentd, $timeout, $reference) = @_;
+    return bless { event_prefix => 'ident_agent_', peeraddr => $peeraddr, peerport => $peerport, sockaddr => $sockaddr, sockport => $sockport, identport => $identport, buggyidentd => $buggyidentd, timeout => $timeout, reference => $reference }, $package;
 }
 
 sub session_id {
@@ -50,8 +49,9 @@ sub session_id {
 }
 
 sub _start {
-    my ( $kernel, $self, $session ) = @_[ KERNEL, OBJECT, SESSION ];
+    my ( $kernel, $self, $session, $sender ) = @_[ KERNEL, OBJECT, SESSION, SENDER ];
 
+    $self->{sender} = $sender->ID();
     $self->{session_id} = $session->ID();
     $self->{ident_filter} = POE::Filter::Ident->new();
     $kernel->delay( '_time_out' => $self->{timeout} );

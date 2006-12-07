@@ -1,6 +1,10 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+1.04 	Thu Dec  7 17:27:17 GMT 2006
+	- Ident-Agent was hanging on to a reference to the spawning
+	session. Changed to session->ID.
+
 1.02    Fri Sep  1 10:27:59 BST 2006
         - Rearranged distribution file structure.
 	- Added test pod and pod coverage.
