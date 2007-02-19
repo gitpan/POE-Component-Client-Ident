@@ -15,30 +15,40 @@ use POE qw(Component::Client::Ident::Agent);
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.04';
+$VERSION = '1.05';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
 
-    croak "You must supply a kernel alias to $package->spawn" unless $alias;
+    my $self = bless { alias => $alias }, $package;
 
-    my $self = bless { Alias => $alias }, $package;
-
-    POE::Session->create (
+    $self->{session_id} = POE::Session->create (
 	object_states => [ 
-		$self => [qw(_start _child shutdown query)],
+		$self => [qw(_start _child query)],
 		$self => { ident_agent_reply => '_ident_agent_reply',
 			   ident_agent_error => '_ident_agent_error',
+			   shutdown          => '_shutdown',
 		},
         ],
-    );
+    )->ID();
 
     return $self;
 }
 
+sub session_id {
+  $_[0]->{session_id};
+}
+
+sub shutdown {
+  my $self = shift;
+  $poe_kernel->call( $self->{session_id}, @_ );
+}
+
 sub _start {
-  my ($kernel,$self) = @_[KERNEL,OBJECT];
-  $kernel->alias_set( $self->{Alias} );
+  my ($kernel,$self,$session) = @_[KERNEL,OBJECT,SESSION];
+  $self->{session_id} = $session->ID();
+  $kernel->alias_set( $self->{alias} ) if $self->{alias};
+  $kernel->refcount_increment( $self->{session_id}, __PACKAGE__ ) unless $self->{alias};
   undef;
 }
 
@@ -55,10 +65,11 @@ sub _child {
   undef;
 }
 
-sub shutdown {
+sub _shutdown {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
   $kernel->call( $_ => 'shutdown' ) for keys %{ $self->{children} };
-  $kernel->alias_remove ( $self->{Alias} );
+  $kernel->alias_remove($_) for $kernel->alias_list();
+  $kernel->refcount_decrement( $self->{session_id}, __PACKAGE__ ) unless $self->{alias};
   undef;
 }
 
@@ -127,7 +138,7 @@ POE::Component::Client::Ident - A component that provides non-blocking ident loo
 
    use POE::Component::Client::Ident;
 
-   POE::Component::Client::Ident->spawn ( 'Ident-Client' );
+   my $poco_obj = POE::Component::Client::Ident->spawn ( 'Ident-Client' );
 
    $kernel->post ( 'Ident-Client' => query => Socket => $socket );
 
@@ -146,13 +157,32 @@ other components and sessions. The Ident protocol is described in RFC 1413 L<htt
 The component takes requests in the form of events, spawns L<POE::Component::Client::Ident::Agent|POE::Component::Client::Ident::Agent> sessions to 
 perform the Ident queries and returns the appropriate responses to the requesting session.
 
-=head1 METHODS
+=head1 CONSTRUCTOR
 
 =over
 
 =item spawn
 
-Takes one argument, a kernel alias to christen the new component with. Returns nothing.
+Takes one argument, a kernel alias to christen the new component with.
+
+Returns an object.
+
+=back
+
+=head1 METHODS
+
+These methods are available on the poco object returned by spawn().
+
+=over
+
+=item session_id
+
+Returns the component's session ID.
+
+=item shutdown
+
+Takes no arguments. Causes the component to terminate gracefully. Any pending Ident::Agent components that are
+running will be closed without returning events.
 
 =back
 

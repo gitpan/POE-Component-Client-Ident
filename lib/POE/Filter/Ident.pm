@@ -12,13 +12,13 @@ use strict;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.0';
+$VERSION = '1.10';
 
 sub new {
   my $class = shift;
   my %args = @_;
-
-  bless {}, $class;
+  $args{lc $_} = delete $args{$_} for keys %args;
+  bless \%args, $class;
 }
 
 
@@ -39,11 +39,11 @@ sub get {
     next unless $line =~ /\S/;
 
     my ($port1, $port2, $replytype, $reply) =
-      ($line =~
-       /^\s*(\d+)\s*,\s*(\d+)\s*:\s*(ERROR|USERID)\s*:\s*(.*)$/);
+      $line =~
+       /^\s*(\d+)\s*,\s*(\d+)\s*:\s*(ERROR|USERID)\s*:\s*(.*)$/;
 
     SWITCH: {
-      if ( not defined ( $reply ) ) {
+      unless ( defined $reply ) {
         push @$events, { name => 'barf', args => [ 'UKNOWN-ERROR' ] };
         last SWITCH;
       }
