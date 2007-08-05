@@ -1,6 +1,9 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+1.06	Sun Aug 05 11:44:11 BST 2007
+	- Fixed abstract_from and build_requires in Makefile.PL
+
 1.04 	Thu Dec  7 17:27:17 GMT 2006
 	- Ident-Agent was hanging on to a reference to the spawning
 	session. Changed to session->ID.

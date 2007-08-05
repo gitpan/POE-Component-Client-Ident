@@ -3,6 +3,8 @@ name 'POE-Component-Client-Ident';
 author 'Chris Williams <chris@bingosnet.co.uk>';
 license 'perl';
 version_from 'lib/POE/Component/Client/Ident.pm';
+abstract_from 'lib/POE/Component/Client/Ident.pm';
+build_requires 'Test::More' => 0.47;
 requires 'warnings' => 0;
 requires 'POE'    => 0.06_07;
 requires 'Carp'   => 0;
