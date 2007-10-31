@@ -16,7 +16,7 @@ use Carp;
 use Socket;
 use vars qw($VERSION);
 
-$VERSION = '1.05';
+$VERSION = '1.07';
 
 sub spawn {
     my $package = shift;
