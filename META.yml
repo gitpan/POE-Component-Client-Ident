@@ -17,7 +17,7 @@ no_index:
     - t
 requires: 
   Carp: 0
-  POE: 0.0607
+  POE: 0.38
   Socket: 0
   warnings: 0
-version: 1.07
+version: 1.08
