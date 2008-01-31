@@ -9,6 +9,7 @@
 package POE::Filter::Ident;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw($VERSION);
 

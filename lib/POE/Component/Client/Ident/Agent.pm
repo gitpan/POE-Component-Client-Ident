@@ -7,7 +7,6 @@
 
 package POE::Component::Client::Ident::Agent;
 
-use 5.006;
 use strict;
 use warnings;
 use POE qw( Wheel::SocketFactory Wheel::ReadWrite Driver::SysRW
@@ -16,7 +15,7 @@ use Carp;
 use Socket;
 use vars qw($VERSION);
 
-$VERSION = '1.08';
+$VERSION = '1.10';
 
 sub spawn {
     my $package = shift;
@@ -217,18 +216,18 @@ POE::Component::Client::Ident::Agent - A component to provide a one-shot non-blo
   use POE::Component::Client::Ident::Agent;
 
   my $poco = POE::Component::Client::Ident::Agent->spawn( 
-						PeerAddr => "192.168.1.12", # Originating IP Address
-						PeerPort => 12345,	    # Originating port
-						SockAddr => "192.168.2.24", # Local IP address
-						SockPort => 69,		    # Local Port
-						Socket   => $socket_handle, # Or pass in a socket handle
-						IdentPort => 113,	    # Port to send queries to on originator
-									    # Default shown
-						BuggyIdentd => 0,	    # Dealing with an Identd that isn't
-									    # RFC compatable. Default is 0.
-						TimeOut => 30,		    # Adjust the timeout period.
-						Reference => $scalar	    # Give the component a reference
-						);
+	PeerAddr => "192.168.1.12", # Originating IP Address
+	PeerPort => 12345,	    # Originating port
+	SockAddr => "192.168.2.24", # Local IP address
+	SockPort => 69,		    # Local Port
+	Socket   => $socket_handle, # Or pass in a socket handle
+	IdentPort => 113,	    # Port to send queries to on originator
+				    # Default shown
+	BuggyIdentd => 0,	    # Dealing with an Identd that isn't
+				    # RFC compatable. Default is 0.
+	TimeOut => 30,		    # Adjust the timeout period.
+	Reference => $scalar	    # Give the component a reference
+  );
 
   sub _child {
    my ($action,$child,$reference) = @_[ARG0,ARG1,ARG2];

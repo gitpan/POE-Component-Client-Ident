@@ -1,6 +1,9 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+1.10	Thu Jan 31 11:23:41 GMT 2008
+	- Enabled perl-5.5.5 compatibility.
+
 1.08	Thu Jan 17 14:16:39 GMT 2008
 	- Fixed up test script naming.
 
