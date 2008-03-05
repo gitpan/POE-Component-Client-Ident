@@ -15,7 +15,7 @@ use Carp;
 use Socket;
 use vars qw($VERSION);
 
-$VERSION = '1.10';
+$VERSION = '1.12';
 
 sub spawn {
     my $package = shift;
@@ -206,6 +206,10 @@ sub _parse_arguments {
   }
   return @returns;
 }
+
+'Who are you?';
+
+__END__
 
 =head1 NAME
 

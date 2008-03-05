@@ -14,7 +14,7 @@ use POE qw(Component::Client::Ident::Agent);
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.10';
+$VERSION = '1.12';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
@@ -128,6 +128,10 @@ sub _parse_arguments {
   }
   return @returns;
 }
+
+'Who are you?';
+
+__END__
 
 =head1 NAME
 

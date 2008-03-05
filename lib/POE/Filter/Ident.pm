@@ -13,7 +13,7 @@ use warnings;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.10';
+$VERSION = '1.12';
 
 sub new {
   my $class = shift;
