@@ -14,7 +14,7 @@ use POE qw(Component::Client::Ident::Agent);
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.12';
+$VERSION = '1.14';
 
 sub spawn {
     my ( $package, $alias ) = splice @_, 0, 2;
@@ -245,6 +245,12 @@ ARG0 is hashref, ARG1 is the type of error.
 =head1 AUTHOR
 
 Chris Williams, E<lt>chris@bingosnet.co.uk<gt>
+
+=head1 LICENSE
+
+Copyright C<(c)> Chris Williams.
+
+This module may be used, modified, and distributed under the same terms as Perl itself. Please see the license that came with your Perl distribution for details.
 
 =head1 SEE ALSO
 

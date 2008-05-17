@@ -1,6 +1,11 @@
 Changelog for POE::Component::Client::Ident:-
 =============================================
 
+1.14	Sat May 17 15:23:36 BST 2008
+	- Updated test case to use Test::POE::Server::TCP
+	- Removed kwalitee test.
+	- Added license information
+
 1.12	Wed Mar  5 09:24:15 GMT 2008
 	- We had no explicit return values, I'm shocked it worked at all.
 

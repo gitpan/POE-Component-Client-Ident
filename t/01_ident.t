@@ -1,8 +1,9 @@
-use Test::More tests => 5;
-BEGIN { use_ok('POE::Component::Client::Ident') };
-
+use Test::More tests => 6;
 use Socket;
-use POE qw(Wheel::SocketFactory Wheel::ReadWrite);
+use POE qw(Filter::Line);
+use Test::POE::Server::TCP;
+
+use_ok('POE::Component::Client::Ident');
 
 my $self = POE::Component::Client::Ident->spawn ( 'Ident-Client' );
 
@@ -12,10 +13,10 @@ POE::Session->create
   ( inline_states =>
       { _start => \&server_start,
 	_stop  => \&server_stop,
-        server_accepted => \&server_accepted,
-        server_error    => \&server_error,
-        client_input    => \&client_input,
-        client_error    => \&client_error,
+	testd_registered => \&_testd_registered,
+        testd_connected => \&server_accepted,
+        testd_client_input    => \&client_input,
+        testd_disconnect    => \&client_error,
 	close_all	=> \&close_down_server,
 	ident_client_reply => \&ident_client_reply,
 	ident_client_error => \&ident_client_error,
@@ -27,17 +28,13 @@ $poe_kernel->run();
 exit 0;
 
 sub server_start {
-    $_[HEAP]->{server} = POE::Wheel::SocketFactory->new
-      ( 
-	BindAddress => '127.0.0.1',
-        SuccessEvent => "server_accepted",
-        FailureEvent => "server_error",
-      );
-
-    ($our_port, undef) = unpack_sockaddr_in( $_[HEAP]->{server}->getsockname );
-    $_[KERNEL]->post ( 'Ident-Client' => query => IdentPort => $our_port, PeerAddr => '127.0.0.1', PeerPort => $_[HEAP]->{Port1}, SockAddr => '127.0.0.1', SockPort => $_[HEAP]->{Port2} );
-
-    $_[KERNEL]->delay ( 'close_all' => 60 );
+    my ($kernel,$heap) = @_[KERNEL,HEAP];
+    $heap->{testd} = Test::POE::Server::TCP->spawn( 
+        address => '127.0.0.1',
+        port => 0,
+	filter => POE::Filter::Line->new( Literal => "\x0D\x0A" ),
+    );
+    $kernel->delay ( 'close_all' => 60 );
     undef;
 }
 
@@ -47,41 +44,49 @@ sub server_stop {
 }
 
 sub close_down_server {
-  $_[KERNEL]->call ( 'Ident-Client' => 'shutdown' );
-  delete $_[HEAP]->{server};
+  $poe_kernel->call ( 'Ident-Client' => 'shutdown' );
+  $_[HEAP]->{testd}->shutdown();
   undef;
 }
 
-sub server_accepted {
-    my $client_socket = $_[ARG0];
+sub _testd_registered {
+  my ($kernel,$heap,$testd) = @_[KERNEL,HEAP,ARG0];
+  my $port = $testd->port();
+  diag("Listening on port: $port\n");
+  $kernel->post( 
+		'Ident-Client', 
+		'query', 
+		'IdentPort', $port, 
+		'PeerAddr', '127.0.0.1', 
+		'PeerPort', $heap->{Port1}, 
+		'SockAddr', '127.0.0.1', 
+		'SockPort', $heap->{Port2},
+  );
+  return;
+}
 
-    my $wheel = POE::Wheel::ReadWrite->new
-      ( Handle => $client_socket,
-        InputEvent => "client_input",
-        ErrorEvent => "client_error",
-	Filter => POE::Filter::Line->new( Literal => "\x0D\x0A" ),
-      );
-    $_[HEAP]->{client}->{ $wheel->ID() } = $wheel;
+sub server_accepted {
+    pass($_[STATE]);
     undef;
 }
 
 sub client_input {
-    my ( $heap, $input, $wheel_id ) = @_[ HEAP, ARG0, ARG1 ];
+    my ( $heap, $id, $input ) = @_[ HEAP, ARG0, ARG1 ];
      
     # Quick and dirty parsing as we know it is our component connecting
     my ($port1,$port2) = split ( /\s*,\s*/, $input );
     if ( $port1 == $heap->{Port1} and $port2 == $heap->{Port2} ) {
-      $heap->{client}->{$wheel_id}->put( "$port1 , $port2 : USERID : UNIX : " . $heap->{UserID} );
+      $heap->{testd}->send_to_client( $id, "$port1 , $port2 : USERID : UNIX : " . $heap->{UserID} );
       pass("Correct response from client");
-    } else {
-      $heap->{client}->{$wheel_id}->put( "$port1 , $port2 : ERROR : UNKNOWN-ERROR");
+    } 
+    else {
+      $heap->{testd}->send_to_client( $id, "$port1 , $port2 : ERROR : UNKNOWN-ERROR");
     }
     undef;
 }
 
 sub client_error {
-    my ( $heap, $wheel_id ) = @_[ HEAP, ARG3 ];
-    delete $heap->{client}->{$wheel_id};
+    pass($_[STATE]);
     undef;
 }
 

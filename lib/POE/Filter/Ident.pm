@@ -13,7 +13,7 @@ use warnings;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.12';
+$VERSION = '1.14';
 
 sub new {
   my $class = shift;
@@ -167,6 +167,12 @@ Dennis "fimmtiu" Taylor, E<lt>dennis@funkplanet.comE<gt>.
 Hacked for Ident by Chris "BinGOs" Williams E<lt>chris@Bingosnet.co.ukE<gt>
 
 Code for parsing the the Ident messages from Net::Ident by Jan-Pieter Cornet.
+
+=head1 LICENSE
+
+Copyright C<(c)> Chris Williams, Dennis Taylor and Jan-Pieter Cornet.
+
+This module may be used, modified, and distributed under the same terms as Perl itself. Please see the license that came with your Perl distribution for details.
 
 =head1 SEE ALSO
 
